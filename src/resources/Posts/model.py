@@ -1,5 +1,5 @@
 from sqlalchemy import *
-from Database.database import Base
+from database.database import Base
 import uuid
 from datetime import datetime , timezone
 
@@ -10,7 +10,7 @@ def create_uuid():
 class Posts(Base):
     __tablename__ = "posts"
     
-    id = Column(String, primary_key=True, default=create_uuid())
+    id = Column(String, primary_key=True, default=create_uuid)
     user_id = Column(String,ForeignKey('user.id'))
     data = Column(String, nullable=False)
     likes = Column(Integer,default=0)

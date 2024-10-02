@@ -1,8 +1,8 @@
 from fastapi import FastAPI,APIRouter,Depends
-from src.functions.likes_function import *
-from Database.database import get_db
+from src.functions.like_functions.likes_function import *
+from database.database import get_db
 from sqlalchemy.orm import Session
-from src.functions.user_function import verify_token
+from src.functions.user_functions.user_function import verify_token
 
 router = APIRouter()
 
@@ -13,11 +13,11 @@ def like_post(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(ve
     has_liked = has_user_liked(db,userid,post_id)
     # breakpoint()
     if not has_liked:
-        post_like(db,post_id)
-        return "liked!"
+        post_like(db,post_id,userid)
+        return True
     else:
-        post_dislike(db,post_id)
-        return "disliked!"
+        post_dislike(db,post_id,userid)
+        return False
 
 @router.get("/posts/{post_id}/liked_by")
 def liked_by(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(verify_token)):

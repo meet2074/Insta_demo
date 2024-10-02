@@ -1,26 +1,29 @@
-from fastapi import HTTPException, Depends, status
-from pydantic import *
+from config import key , algo, access_token_min, refresh_token_days ,otp_exp_time_min
+from src.utils.hash import hash_password, verify_password
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from sqlalchemy.exc import NoResultFound , DataError
-from src.resources.user.model import User,OTP
-from sqlalchemy.orm import Session
-from random import randint
-from src.resources.user.hash import hash_password, verify_password
+from fastapi import HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv  
+from src.resources.user.model import User,OTP
+from src.resources.posts.model import Posts
+from src.resources.likes.model import likes
 import src.resources.user.schemas as schemas
+from sqlalchemy.orm import Session
+from jose import JWTError, jwt
+from dotenv import load_dotenv  
+from random import randint
+from pydantic import *
 import os
 
 load_dotenv() 
 O_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
-key = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-algo = os.getenv("algo")
-access_token_min = int(os.getenv("access_token_min"))
-refresh_token_days = int(os.getenv("refresh_token_days"))
-otp_exp_time_min= int(os.getenv("otp_exp_time_min"))
+# key = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+# algo = os.getenv("algo")
+# access_token_min = int(os.getenv("access_token_min"))
+# refresh_token_days = int(os.getenv("refresh_token_days"))
+# otp_exp_time_min= int(os.getenv("otp_exp_time_min"))
 
 
 
@@ -63,8 +66,8 @@ async def create_user(db: Session, user: schemas.Create_User):
         db.refresh(the_user)
     except DataError:
         raise HTTPException(status_code=406,detail="Please Enter a valid birthdate!")
-    except Exception:
-        raise HTTPException(status_code=404,detail="A Database error!")
+    except Exception as err:
+        raise HTTPException(status_code=404,detail=f"A Database error! {err}")
     
     # except 
     
@@ -111,7 +114,7 @@ def verify_otp(otp_scheme: schemas.Create_User_Otp, db: Session):
     time_diff = otp_create_time + timedelta(minutes=otp_exp_time_min) 
     if current_time>time_diff:
         delete_otp(db,user_id)
-        raise HTTPException(status_code=401,detail="OTP expired!")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="OTP expired!")
     otp2 = data.otp
     if otp_scheme.otp != otp2:
         return False
@@ -121,8 +124,8 @@ def verify_otp(otp_scheme: schemas.Create_User_Otp, db: Session):
 def delete_otp(db: Session, userid: str):
     try:
         result = db.query(OTP).filter(OTP.user_id == userid).delete()
-        if result == 0:
-            raise HTTPException
+        # if result == 0:
+        #     raise HTTPException()
         db.commit()
         return True
     except NoResultFound as err:
@@ -175,15 +178,14 @@ def verify_token(token: str = Depends(O_scheme)):
         
         payload = token_decode(token)
         # print(payload)
-        
         if payload is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: No payload in the token.",
             )
-        is_expired =  is_token_expired(payload)
-        if not is_expired:
-            raise HTTPException(status_code=401,detail="Token expired!")
+        # is_expired =  is_token_expired(payload)
+        # if not is_expired:
+        #     raise HTTPException(status_code=401,detail="Token expired!")
         return payload
     except JWTError as err:
         raise HTTPException(
@@ -196,7 +198,7 @@ def is_token_expired(payload: dict):
 
     payload_time = datetime.fromtimestamp(payload.get("exp"), tz=timezone.utc)
     # breakpoint()
-    if payload_time > current_time:
+    if payload_time < current_time:
         return True
     return False
 
@@ -231,7 +233,9 @@ def update_user_data(db: Session, updated_data: schemas.update_profile, id: str)
 
 def delete_user_data(db: Session, id: str):
     try:
-        db.query(User).filter(User.id == id).delete()
+        # db.query()
+        data = db.query(User).filter(User.id == id).one()
+        data.is_deleted = True
         db.commit()
     except Exception as err:
         print(err)

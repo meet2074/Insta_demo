@@ -8,7 +8,7 @@ class post_create(BaseModel):
     captions:str = None
     
 class post_update(BaseModel):
-    data:str
+    data:str = None
     captions:str = None
     
 class get_post(BaseModel):

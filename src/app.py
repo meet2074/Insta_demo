@@ -1,0 +1,16 @@
+from fastapi import FastAPI
+from src.resources.likes.api import router as likerouter
+from src.resources.user.api import router as userrouter
+from src.resources.posts.api import router as postrouter
+from src.resources.user import model
+from database.database import engine
+import uvicorn
+
+
+app = FastAPI()
+
+app.include_router(userrouter)
+app.include_router(postrouter)
+app.include_router(likerouter)
+
+

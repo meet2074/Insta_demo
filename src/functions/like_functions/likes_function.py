@@ -1,18 +1,21 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from src.resources.Posts.model import Posts
-from src.resources.Likes.model import likes
+from sqlalchemy import and_
+from fastapi import HTTPException,status
+from src.resources.posts.model import Posts
+from src.resources.likes.model import likes
 from src.resources.user.model import User
+import uuid
 
 
-def post_like(db: Session, postid: str):
+
+def post_like(db: Session, postid: str,userid:str):
     try:
         data = db.query(Posts).filter(Posts.id == postid).one()
+        # breakpoint()
         data.likes += 1
         db.commit()
 
-        userid = get_user_id_from_post_id(db, postid)
-        like_data = likes(post_id=postid, user_id=userid)
+        like_data = likes(id=str(uuid.uuid4()) ,post_id=postid, user_id=userid)
         db.add(like_data)
         db.commit()
         db.refresh(like_data)
@@ -21,13 +24,13 @@ def post_like(db: Session, postid: str):
         raise HTTPException(status_code=404, detail=str(err))
 
 
-def post_dislike(db: Session, postid: str):
+def post_dislike(db: Session, postid: str,userid:str):
     try:
         data = db.query(Posts).filter(Posts.id == postid).one()
         data.likes -= 1
         db.commit()
 
-        data2 = db.query(likes).filter(likes.post_id == postid).delete()
+        db.query(likes).filter(likes.user_id== userid,likes.post_id==postid).delete()
         # db.delete(data2)
         db.commit()
         return True
@@ -48,24 +51,28 @@ def get_name_by_user_id(db: Session, user_id: str):
 
 def posts_liked_by(db: Session, postid: str):
     data = db.query(likes).filter(likes.post_id == postid).all()
-    
+    # breakpoint()
+    # print(data)
     u_id = []
     names = []
     for i in data:
-        u_id.append(i["user_id"])
-    for i in u_id:
-        name = get_name_by_user_id(db, i)
+        id = i.user_id
+        name= get_name_by_user_id(db,id)
         names.append(name)
     return names
+    # return data
 
 
 def has_user_liked(db: Session, user_id: str, post_id: str):
-
-    data = db.query(likes).filter(likes.user_id == user_id).one_or_none()
-    if not data:
+    try:
+        data = db.query(likes).filter(likes.user_id == user_id,likes.post_id==post_id).one_or_none()
+        if not data:
+            return False
+            # raise HTTPException(status_code=404,detail=str(err))
+        # breakpoint()
+        if data.post_id == post_id:
+            return True
         return False
-        # raise HTTPException(status_code=404,detail=str(err))
-    # breakpoint()
-    if data.post_id == post_id:
-        return True
-    return False
+    except Exception as err:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        
