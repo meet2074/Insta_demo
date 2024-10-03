@@ -60,8 +60,8 @@ def login(user: schemas.Login, db: Session = Depends(database.get_db)):
     return {"access token": access_token, "Refresh token": refresh_token}
 
 
-@router.get("/refresh")
-def refresh_token(db:Session,payload: dict = Depends(verify_token)):
+@router.get("/refresh",response_model=None)
+def refresh_token(db:Session = Depends(database.get_db),payload: dict = Depends(verify_token)):
 
     id = payload.get("id")
     email = db.query(User).filter(User.id==id).one().email

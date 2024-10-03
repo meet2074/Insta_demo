@@ -11,5 +11,3 @@ class likes(Base):
     id = Column(String, primary_key=True, default=str(uuid.uuid4()))
     post_id = Column(String,ForeignKey('posts.id'))
     user_id = Column(String,ForeignKey('user.id'))
-    liked_at = Column(DateTime,default=datetime.now(tz=timezone.utc))
-    unliked_at = Column(DateTime,default=datetime.now(tz=timezone.utc))

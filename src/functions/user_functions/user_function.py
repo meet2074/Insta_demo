@@ -221,18 +221,18 @@ def delete_user_data(db: Session, id: str):
         raise HTTPException(status_code=404, detail="a database error!")
 
 
-def get_hashed_pass(db: Session, email: str):
-    data = db.query(User).filter(User.email == email).one_or_none()
-    if data is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return data.password
+# def get_hashed_pass(db: Session, email: str):
+#     data = db.query(User).filter(User.email == email).one_or_none()
+#     if data is None:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return data.password
 
 
 def user_login(db: Session, user: schemas.Login):
     data = db.query(User).filter(User.email == user.email).one_or_none()
-    if data is None:
+    if data is None or data.is_deleted:
         raise HTTPException(status_code=404, detail="Invalid Email id!")
-    hashed_pass = get_hashed_pass(db, user.email)
+    hashed_pass = data.password
     if verify_password(user.password, hashed_pass):
         return True
     else:

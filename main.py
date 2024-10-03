@@ -1,5 +1,4 @@
-import app
-from app import uvicorn
+from src.app import uvicorn,app
 from database.connection import *
 
 if __name__ == "__main__":
