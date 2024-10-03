@@ -31,6 +31,7 @@ def post_dislike(db: Session, postid: str, userid: str):
         db.query(likes).filter(
             likes.user_id == userid, likes.post_id == postid
         ).delete()
+        # db.delete(data2)
         db.commit()
         return True
     except Exception as err:
@@ -74,4 +75,4 @@ def has_user_liked(db: Session, user_id: str, post_id: str):
             return True
         return False
     except Exception as err:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Not found!")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Not found")

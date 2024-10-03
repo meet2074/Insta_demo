@@ -60,9 +60,6 @@ def get_post_by_id(db: Session, user_id: str):
         raise HTTPException(status_code=400, detail=str(err))
 
 
-
-
-
 def get_post_all(db: Session, limit: int, offset: int):
     posts_list = db.query(Posts).offset(offset).limit(limit).all()
     

@@ -6,19 +6,17 @@ from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 from src.resources.user.model import User,OTP
-from src.resources.posts.model import Posts
-from src.resources.likes.model import likes
 import src.resources.user.schemas as schemas
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from dotenv import load_dotenv  
 from random import randint
 from pydantic import *
-import os
+import uuid
 
 load_dotenv() 
 O_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-access_token_min = 30
+access_token_min = 300
 refresh_token_days = 7
 otp_exp_time_min= 100
 
@@ -38,11 +36,11 @@ async def create_user(db: Session, user: schemas.Create_User):
         is_mobile = (
             db.query(User).filter(User.mobile_number == user.mobile_number).first()
         )
-        
     except Exception as err:
         pass
-    if is_mobile or is_mobile.is_deleted:
-        raise HTTPException(status_code=400, detail="Mobile number already exist!!")
+    if is_mobile:
+        if is_mobile.is_deleted:
+            raise HTTPException(status_code=400, detail="Mobile number already exist!!")
     
     #checking the email if it is valid or not
     
@@ -55,6 +53,7 @@ async def create_user(db: Session, user: schemas.Create_User):
 
     #adding the user in database
     the_user = User(
+        id=str(uuid.uuid4()),
         first_name=user.first_name,
         middle_name=user.middle_name,
         last_name=user.last_name,
@@ -73,7 +72,7 @@ async def create_user(db: Session, user: schemas.Create_User):
     except Exception as err:
         raise HTTPException(status_code=404,detail=f"A Database error! {err}")
     
-    # except 
+    
     
     #creating an otp
     try:
@@ -96,6 +95,7 @@ async def create_user(db: Session, user: schemas.Create_User):
         MAIL_SSL_TLS=False,  
         USE_CREDENTIALS=True,
     )
+    # the_otp = randint(100000,999999)
     try:
         message = MessageSchema(
             subject="OTP",
@@ -108,12 +108,14 @@ async def create_user(db: Session, user: schemas.Create_User):
     except Exception as err:
         raise HTTPException(status_code=404, detail=f"{err}")
     
+    # return {"the_user":the_user,"otp":the_otp}
 
 
 def verify_otp(otp_scheme: schemas.Create_User_Otp, db: Session):
+    
     current_time = datetime.now()
-    user_id = db.query(User).filter(User.email == otp_scheme.email).one().id
-    data = db.query(OTP).filter(OTP.user_id == user_id).one()
+    user_id = db.query(User).filter(User.email == otp_scheme.email).one_or_none().id
+    data = db.query(OTP).filter(OTP.user_id == user_id).one_or_none()
     otp_create_time = data.created_at
     time_diff = otp_create_time + timedelta(minutes=otp_exp_time_min) 
     if current_time>time_diff:
@@ -127,16 +129,13 @@ def verify_otp(otp_scheme: schemas.Create_User_Otp, db: Session):
 
 def delete_otp(db: Session, userid: str):
     try:
-        result = db.query(OTP).filter(OTP.user_id == userid).delete()
+        db.query(OTP).filter(OTP.user_id == userid).delete()
         # if result == 0:
         #     raise HTTPException()
         db.commit()
         return True
     except NoResultFound as err:
         return err
-    finally:
-        return True
-
 
 # def create_access_token(payload:dict,db:Session):
 #     exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
@@ -221,19 +220,17 @@ def delete_user_data(db: Session, id: str):
         raise HTTPException(status_code=404, detail="a database error!")
 
 
-# def get_hashed_pass(db: Session, email: str):
-#     data = db.query(User).filter(User.email == email).one_or_none()
-#     if data is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return data.password
-
-
 def user_login(db: Session, user: schemas.Login):
     data = db.query(User).filter(User.email == user.email).one_or_none()
+    
     if data is None or data.is_deleted:
         raise HTTPException(status_code=404, detail="Invalid Email id!")
+    is_otp = db.query(OTP).filter(OTP.user_id==data.id).one_or_none()
+    if is_otp:
+        raise HTTPException(status_code=401,detail="Please verify the otp")   
     hashed_pass = data.password
     if verify_password(user.password, hashed_pass):
+        data.is_active = True
         return True
     else:
         raise HTTPException(status_code=401, detail="Incorrect password!!")
@@ -243,5 +240,3 @@ def get_user_by_id(db: Session, userid: str):
     user = db.query(User).filter(User.id == userid).one()
     payload = {"name": user.first_name, "id": user.id}
     return payload
-
-
