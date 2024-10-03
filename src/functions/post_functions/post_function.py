@@ -26,26 +26,15 @@ def update_post(db: Session, post_id: str, post=post_update):
     try:
         data = db.query(Posts).filter(Posts.id == post_id).one()
         # data.data = post.data
-        if post.captions is not  None:
+        if post.captions is not None:
             data.captions = post.captions
         if post.data is not None:
             data.data = post.data
-        
-        
+
         data.updated_at = datetime.now()
         db.commit()
     except Exception as err:
         raise HTTPException(status_code=401, detail=str(err))
-
-
-# def get_post_from_userid(db:Session,user_id:str):
-#     data = db.query(Posts)
-
-
-def get_user_id_by_post_id(db: Session, post_id: str):
-    data = db.query(Posts).filter(Posts.id == post_id).one_or_none()
-    userid = data.user_id
-    return userid
 
 
 def delete_post(db: Session, post_id: str):
@@ -78,9 +67,5 @@ def get_liked_by(db: Session, post_id: str):
 
 def get_post_all(db: Session, limit: int, offset: int):
     posts_list = db.query(Posts).offset(offset).limit(limit).all()
-    temp = 1
-    post = {}
-    for i in posts_list:
-        post[f"post {temp}"] = i
-        temp += 1
-    return post
+    
+    return posts_list

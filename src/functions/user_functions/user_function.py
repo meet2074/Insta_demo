@@ -1,4 +1,4 @@
-from config import key , algo, access_token_min, refresh_token_days ,otp_exp_time_min
+from src.config import env
 from src.utils.hash import hash_password, verify_password
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from sqlalchemy.exc import NoResultFound , DataError
@@ -18,6 +18,9 @@ import os
 
 load_dotenv() 
 O_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+access_token_min = 30
+refresh_token_days = 7
+otp_exp_time_min= 100
 
 # key = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 # algo = os.getenv("algo")
@@ -35,9 +38,10 @@ async def create_user(db: Session, user: schemas.Create_User):
         is_mobile = (
             db.query(User).filter(User.mobile_number == user.mobile_number).first()
         )
+        
     except Exception as err:
         pass
-    if is_mobile:
+    if is_mobile or is_mobile.is_deleted:
         raise HTTPException(status_code=400, detail="Mobile number already exist!!")
     
     #checking the email if it is valid or not
@@ -83,9 +87,9 @@ async def create_user(db: Session, user: schemas.Create_User):
     
     #Sending the otp
     conf = ConnectionConfig(
-        MAIL_USERNAME="meetprajapati2074@gmail.com",
-        MAIL_PASSWORD="nflu fxte aihg tbws",  
-        MAIL_FROM="meetprajapati2074@gmail.com",
+        MAIL_USERNAME=env.MAIL_USERNAME,
+        MAIL_PASSWORD=env.MAIL_PASSWORD,  
+        MAIL_FROM=env.MAIL_USERNAME,
         MAIL_PORT=587,
         MAIL_SERVER="smtp.gmail.com",  
         MAIL_STARTTLS=True,  
@@ -134,20 +138,11 @@ def delete_otp(db: Session, userid: str):
         return True
 
 
-def create_token_once_expired(payload: dict):
-    exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
-    payload.update({"exp": exp})
-    token = jwt.encode(payload, key, algo)
-    return token
-
-
-def create_access_token_signup(user: schemas.Token_Schema):
-    payload = dict(user)
-    exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
-    # breakpoint()
-    payload.update({"exp": exp,"type":"access"})
-    token = jwt.encode(payload, key, algo)
-    return token
+# def create_access_token(payload:dict,db:Session):
+#     exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
+#     payload.update({"exp": exp,"type":"access"})
+#     token = jwt.encode(payload, key, algo)
+#     return token
 
 
 def create_refresh_token(email: str, db: Session):
@@ -155,13 +150,9 @@ def create_refresh_token(email: str, db: Session):
     payload = {"name": data.first_name, "id": data.id}
     exp = datetime.now(tz=timezone.utc) + timedelta(days=refresh_token_days)
     payload.update({"exp": exp,"type":"refresh"})
-    token = jwt.encode(payload, key, algo)
+    token = jwt.encode(payload, env.key, env.algo)
     return token
 
-
-def token_decode(Token: str):
-    data = jwt.decode(Token, key, algorithms=algo)
-    return data
 
 
 def access_token_create_login(email: str, db: Session):
@@ -169,38 +160,26 @@ def access_token_create_login(email: str, db: Session):
     payload = {"id": data.id, "name": data.first_name}
     exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
     payload.update({"exp": exp,"type":"access"})
-    token = jwt.encode(payload, key, algo)
+    token = jwt.encode(payload, env.key, env.algo)
     return token
 
 
 def verify_token(token: str = Depends(O_scheme)):
     try:
         
-        payload = token_decode(token)
+        payload = jwt.decode(token, env.key, algorithms=env.algo)
         # print(payload)
         if payload is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: No payload in the token.",
             )
-        # is_expired =  is_token_expired(payload)
-        # if not is_expired:
-        #     raise HTTPException(status_code=401,detail="Token expired!")
         return payload
     except JWTError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token!! {err}"
         )
 
-
-def is_token_expired(payload: dict):
-    current_time = datetime.now(tz=timezone.utc)
-
-    payload_time = datetime.fromtimestamp(payload.get("exp"), tz=timezone.utc)
-    # breakpoint()
-    if payload_time < current_time:
-        return True
-    return False
 
 
 def get_user_data(db: Session, id: str):

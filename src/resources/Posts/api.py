@@ -4,6 +4,8 @@ from src.functions.post_functions.post_function import *
 from src.functions.user_functions.user_function import verify_token
 from src.resources.posts import schemas
 from database.database import get_db
+from src.functions.like_functions.likes_function import get_user_id_from_post_id
+
 
 router = APIRouter()
 
@@ -22,7 +24,7 @@ def get_posts(db:Session = Depends(get_db),payload:dict = Depends(verify_token))
 @router.get("/posts/{post_id}",response_model=schemas.get_post)
 def get_single_post(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(verify_token)):
     id = payload.get("id")
-    if id!=get_user_id_by_post_id(db,post_id):
+    if id!=get_user_id_from_post_id(db,post_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Not authenticated!")
     post = get_one_post(db,post_id)
     return post
@@ -36,7 +38,7 @@ def create_new_post(post:schemas.post_create,db:Session = Depends(get_db),payloa
 @router.put("/posts/update_post/{post_id}")
 def update_a_post(post_schema:schemas.post_update,post_id:str,db:Session = Depends(get_db),payload:dict = Depends(verify_token)):
     id = payload.get("id")
-    if id!=get_user_id_by_post_id(db,post_id):
+    if id!=get_user_id_from_post_id(db,post_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Not authenticated!")
     update_post(db,post_id,post_schema)
     return "Post updated successfully!"
@@ -44,7 +46,7 @@ def update_a_post(post_schema:schemas.post_update,post_id:str,db:Session = Depen
 @router.delete("/posts/delete/{post_id}")
 def delete(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(verify_token)):
     id = payload.get("id")
-    if id!=get_user_id_by_post_id(db,post_id):
+    if id!=get_user_id_from_post_id(db,post_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Not authenticated!")
     delete_post(db,post_id)
     return "Post deleted successfully!"
