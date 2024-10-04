@@ -49,8 +49,9 @@ def get_name_by_user_id(db: Session, user_id: str):
     return data.first_name
 
 
-def posts_liked_by(db: Session, postid: str):
-    data = db.query(likes).filter(likes.post_id == postid).all()
+def posts_liked_by(db: Session, postid: str,page:int,limit:int):
+    page = page*limit - limit
+    data = db.query(likes).filter(likes.post_id == postid).offset(page).limit(limit).all()
 
     names = []
     for i in data:

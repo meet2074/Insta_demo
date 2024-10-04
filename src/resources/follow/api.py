@@ -1,6 +1,6 @@
 from database import database
 from sqlalchemy.orm import Session
-from fastapi import APIRouter,Depends
+from fastapi import APIRouter,Depends,Query,Path
 from typing import Optional
 from src.functions.user_functions.user_function import verify_token
 from src.functions.follow_functions.follow_functions import *
@@ -14,31 +14,35 @@ def follow_the_profile(follower_id:str,payload:dict = Depends(verify_token),db:S
     followed = is_followed(db,user_id,follower_id)
     if not followed:
         follow_a_user(db,current_user_id=user_id,follower_id=follower_id)
-        # breakpoint()
         return "Followed!"
     else:
         unfollow_a_user(db,user_id,follower_id=follower_id)
         return "Unfollowed!"
-
-@router.get("/profile/{follower_id}/followers")
-def get_all_followers(follower_id:str,payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
-    followers = get_followers(db,follower_id)
-    return followers
-
+    
+    
 @router.get("/profile/followers")
-def get_all_followers(payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
-    id = payload.get("id")
-    followers = get_followers(db,id)
-    return followers
+def get_all_followers(id:Optional[str|None] = None,page_no:int = Query(default=1),limit:int = Query(default=2),payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
+    if not id:
+        id = payload.get("id")
+        # return f"{id}"
+    followers = get_followers(db,id,page_no,limit)
+    count = get_count_followers_and_following(db,id)
+    return {"id":id,"total_Followers":count.get("Followers"),"followers":followers,"page_no":page_no,}
 
-@router.get("/profile/{follower_id}/following")
-def get_all_following(follower_id:Optional[str|None]=None,payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
-    followers = get_following(db,follower_id)
-    return followers
 
 @router.get("/profile/following")
-def get_all_following(payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
-    id = payload.get("id")
-    followers = get_following(db,id)
-    return followers
-    
+def get_all_following(id:Optional[str] = None,page_no:int = Query(default=1),limit:int = Query(default=2),payload:dict = Depends(verify_token),db:Session = Depends(database.get_db)):
+    if not id:
+        id = payload.get("id")
+    followings = get_following(db,id,page_no,limit)
+    count = get_count_followers_and_following(db,id)
+    return {"id":id,"total_following":count.get("Followers"),"following":followings,"page_no":page_no}
+
+@router.get("/profile/follow_count")
+def get_count_fwr(id:Optional[str]=None,db:Session = Depends(database.get_db),payload:dict = Depends(verify_token)):
+    if not id:
+        id = payload.get("id")
+    followers_count = get_count_followers_and_following(db,id)
+    return {"user_id":id,"followers":followers_count.get("Followers"),"followings":followers_count.get("Following")}
+
+

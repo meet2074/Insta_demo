@@ -9,9 +9,9 @@ from src.functions.like_functions.likes_function import get_user_id_from_post_id
 
 router = APIRouter()
 
-@router.get("/allpost",response_model=dict[str,schemas.get_post])
-def get_all_post(db:Session = Depends(get_db),payload:dict = Depends(verify_token),limit:int = Query(10,ge=1),offset:int = Query(0,ge=0)):
-    post = get_post_all(db,limit,offset)
+@router.get("/allpost",response_model=list[schemas.get_post])
+def get_all_post(db:Session = Depends(get_db),payload:dict = Depends(verify_token),limit:int = Query(default=5),page:int = Query(default=1)):
+    post = get_post_all(db,limit,page)
     return post
 
 @router.get("/posts", response_model=list[schemas.get_post])

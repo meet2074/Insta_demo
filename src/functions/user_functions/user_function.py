@@ -1,4 +1,4 @@
-from src.config import env
+from src.config import Env
 from src.utils.hash import hash_password, verify_password
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from sqlalchemy.exc import NoResultFound , DataError
@@ -20,11 +20,6 @@ access_token_min = 300
 refresh_token_days = 7
 otp_exp_time_min= 100
 
-# key = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-# algo = os.getenv("algo")
-# access_token_min = int(os.getenv("access_token_min"))
-# refresh_token_days = int(os.getenv("refresh_token_days"))
-# otp_exp_time_min= int(os.getenv("otp_exp_time_min"))
 
 
 
@@ -86,9 +81,9 @@ async def create_user(db: Session, user: schemas.Create_User):
     
     #Sending the otp
     conf = ConnectionConfig(
-        MAIL_USERNAME=env.MAIL_USERNAME,
-        MAIL_PASSWORD=env.MAIL_PASSWORD,  
-        MAIL_FROM=env.MAIL_USERNAME,
+        MAIL_USERNAME=Env.MAIL_USERNAME,
+        MAIL_PASSWORD=Env.MAIL_PASSWORD,  
+        MAIL_FROM=Env.MAIL_USERNAME,
         MAIL_PORT=587,
         MAIL_SERVER="smtp.gmail.com",  
         MAIL_STARTTLS=True,  
@@ -149,7 +144,7 @@ def create_refresh_token(email: str, db: Session):
     payload = {"name": data.first_name, "id": data.id}
     exp = datetime.now(tz=timezone.utc) + timedelta(days=refresh_token_days)
     payload.update({"exp": exp,"type":"refresh"})
-    token = jwt.encode(payload, env.key, env.algo)
+    token = jwt.encode(payload, Env.key, Env.algo)
     return token
 
 
@@ -157,16 +152,16 @@ def create_refresh_token(email: str, db: Session):
 def access_token_create_login(email: str, db: Session):
     data = db.query(User).filter(User.email == email).one()
     payload = {"id": data.id, "name": data.first_name}
-    exp = datetime.now(tz=timezone.utc) + timedelta(minutes=access_token_min)
+    exp = datetime.now(tz=timezone.utc) + timedelta(hours=access_token_min)
     payload.update({"exp": exp,"type":"access"})
-    token = jwt.encode(payload, env.key, env.algo)
+    token = jwt.encode(payload, Env.key, Env.algo)
     return token
 
 
 def verify_token(token: str = Depends(O_scheme)):
     try:
         
-        payload = jwt.decode(token, env.key, algorithms=env.algo)
+        payload = jwt.decode(token, Env.key, algorithms=Env.algo)
         # print(payload)
         if payload is None:
             raise HTTPException(
@@ -178,7 +173,10 @@ def verify_token(token: str = Depends(O_scheme)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token!! {err}"
         )
-
+def get_all_user_data(db:Session,page:int,limit:int):
+    page = page*limit-limit
+    data = db.query(User).offset(page).limit(limit).all()
+    return data
 
 
 def get_user_data(db: Session, id: str):
@@ -202,6 +200,7 @@ def update_user_data(db: Session, updated_data: schemas.update_profile, id: str)
             data.last_name = updated_data.last_name
         if updated_data.mobile_number is not None:
             data.mobile_number = updated_data.mobile_number
+        data.updated_at = datetime.now(tz=timezone.utc)
         db.commit()
 
     except Exception as err:

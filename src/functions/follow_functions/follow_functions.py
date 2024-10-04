@@ -1,8 +1,10 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session 
+from sqlalchemy import desc
 from fastapi import HTTPException,status
 from src.resources.user.model import User
 from src.resources.follow.model import Follower
 from src.functions.like_functions.likes_function import get_name_by_user_id
+from datetime import datetime,timezone
 import uuid
 def follow_a_user(db:Session,current_user_id:str,follower_id:str):
     try:
@@ -14,7 +16,7 @@ def follow_a_user(db:Session,current_user_id:str,follower_id:str):
         follower = db.query(User).filter(User.id==follower_id).one()
         follower.followers+=1
         
-        followers = Follower(id=str(uuid.uuid4()),user_id=current_user_id,follower_id=follower_id)
+        followers = Follower(id=str(uuid.uuid4()),user_id=current_user_id,follower_id=follower_id,created_at=datetime.now(tz=timezone.utc))
         db.add(followers)
         db.commit()
         db.refresh(followers)
@@ -45,24 +47,27 @@ def is_followed(db:Session,current_user_id:str,follower_id:str):
     except Exception as err:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=f"A database error occred! {err}")
     
-def get_followers(db:Session,id_of_user:str):
+def get_followers(db:Session,id_of_user:str,page:int,limit:int):
+    page = page*limit-limit
     try:
-        
-        data = db.query(Follower).filter(Follower.follower_id==id_of_user).all()
+        data = db.query(Follower).filter(Follower.follower_id==id_of_user).order_by(desc(Follower.created_at)).offset(page).limit(limit)
+        data
         names =  []
         for i in data:
             id = i.user_id
+            time = i.created_at
             user = db.query(User).filter(User.id==id).one()
             firstname = user.first_name
             lastname = user.last_name
-            names.append({"full-name":firstname +" "+ lastname,"user_id":id})
+            names.append({"full-name":firstname +" "+ lastname,"user_id":id,"Followed_at":time})
         return names
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
 
-def get_following(db:Session,id_of_user:str):
+def get_following(db:Session,id_of_user:str,page:int,limit:int):
+    page = page*limit-limit
     try:
-        data = db.query(Follower).filter(Follower.user_id==id_of_user).all()
+        data = db.query(Follower).filter(Follower.user_id==id_of_user).order_by(desc(Follower.created_at)).offset(page).limit(limit)
         names =  []
         for i in data:
             id = i.follower_id
@@ -73,3 +78,7 @@ def get_following(db:Session,id_of_user:str):
         return names
     except Exception as err:
         raise HTTPException(status_code=500,detail=str(err))
+
+def get_count_followers_and_following(db:Session,id:str):
+    data = db.query(User).filter(User.id == id).one()
+    return {"Followers":data.followers,"Following":data.following}

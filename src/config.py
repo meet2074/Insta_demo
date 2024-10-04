@@ -1,6 +1,6 @@
 import os
 
-class env:
+class Env:
     key = os.getenv("key")
     algo = os.getenv("algo")
     DATABASE_URL = os.getenv("DATABASE_URL")

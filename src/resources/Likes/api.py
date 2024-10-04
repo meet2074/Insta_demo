@@ -1,4 +1,4 @@
-from fastapi import FastAPI,APIRouter,Depends
+from fastapi import FastAPI,APIRouter,Depends,Query
 from src.functions.like_functions.likes_function import *
 from database.database import get_db
 from sqlalchemy.orm import Session
@@ -20,6 +20,6 @@ def like_post(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(ve
         return False
 
 @router.get("/posts/{post_id}/liked_by")
-def liked_by(post_id:str,db:Session = Depends(get_db),payload:dict = Depends(verify_token)):
-    data = posts_liked_by(db,post_id)
+def liked_by(post_id:str,page:int =Query(default=1),limit:int = Query(default=5),db:Session = Depends(get_db),payload:dict = Depends(verify_token)):
+    data = posts_liked_by(db,post_id,page,limit)
     return data

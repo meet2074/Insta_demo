@@ -1,8 +1,9 @@
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter,Depends,HTTPException,Query
 from sqlalchemy.orm import Session
 from database import database
 from . import schemas
 from src.functions.user_functions.user_function import *
+from typing import Optional
 from src.functions.follow_functions.follow_functions import *
 
 router = APIRouter()
@@ -32,6 +33,12 @@ def get_posts(
     id = payload.get("id")
     posts = get_user_data(db, id)
     return posts
+
+@router.get("/all_user",response_model=list[schemas.get_profile_response])
+def get_all_user(payload: dict = Depends(verify_token),page_no:int = Query(default=1),limit:int = Query(default=4)  , db: Session = Depends(database.get_db)):
+    data = get_all_user_data(db,page_no,limit)
+    return data
+
 
 @router.put("/update")
 def update_data(
