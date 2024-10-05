@@ -6,12 +6,12 @@ from src.resources.posts.schemas import *
 from datetime import datetime
 
 
-def create_post(db: Session, user_id: str, post: post_create):
-    if post.data is None:
+def create_post(db: Session, user_id: str, image:bytes ,captions:str):
+    if image is None:
         raise HTTPException(status_code=400, detail="Please upload the photo!")
 
     try:
-        post_data = Posts(user_id=user_id, data=post.data, captions=post.captions,created_at=datetime.now(tz=timezone.utc),updated_at=datetime.now(tz=timezone.utc))
+        post_data = Posts(user_id=user_id, data=image, captions=captions,created_at=datetime.now(tz=timezone.utc),updated_at=datetime.now(tz=timezone.utc))
         db.add(post_data)
         db.commit()
         db.refresh(post_data)
@@ -47,7 +47,7 @@ def delete_post(db: Session, post_id: str):
 
 
 def get_one_post(db: Session, post_id: str):
-    data = db.query(Posts).filter(Posts.id == post_id).one()
+    data = db.query(Posts).filter(Posts.id == post_id).one_or_none()
     return data
 
 
@@ -65,3 +65,10 @@ def get_post_all(db: Session, limit: int, page: int):
     posts_list = db.query(Posts).offset(page).limit(limit).all()
     
     return posts_list
+
+def image_upload(db:Session,data:bytes):
+    data = Image(id = str(uuid.uuid4()),image=data)
+    db.add(data)
+    db.commit()
+    db.refresh(data)
+    

@@ -12,10 +12,16 @@ class Posts(Base):
     
     id = Column(String, primary_key=True, default=create_uuid)
     user_id = Column(String,ForeignKey('user.id'))
-    data = Column(String, nullable=False)
+    data = Column(LargeBinary, nullable=False)
     likes = Column(Integer,default=0)
     captions = Column(String)
     created_at = Column(DateTime,default=datetime.now(tz=timezone.utc))
     updated_at = Column(DateTime,default=datetime.now(tz=timezone.utc))    
     is_deleted = Column(Boolean,default=False)
+    
+class Image(Base):
+    __tablename__ = "image"
+    
+    id = Column(String, primary_key=True)
+    image = Column(LargeBinary,nullable=True)
 
