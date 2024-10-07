@@ -8,7 +8,7 @@ from typing import Optional
 #     captions:str = None
     
 class post_update(BaseModel):
-    data:str = None
+    data:bytes = None
     captions:str = None
     
 class get_post(BaseModel):
