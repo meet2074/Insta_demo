@@ -10,6 +10,17 @@ class Comments(Base):
     postid = Column(String,ForeignKey("posts.id"),nullable=False,unique=False)
     userid = Column(String, ForeignKey("user.id"),nullable=False,unique=False)
     data = Column(String,nullable=False,unique=False)
-    likes = Column(Integer,default=0)
+    replies = Column(Integer,nullable=True,default=0)
     created_at = Column(String,default=datetime.now(tz=timezone.utc))
     is_deleted = Column(Boolean,default=False)
+    
+class MetaComments(Base):
+    __tablename__ = "metacomments"
+    
+    id = Column(String, primary_key=True,default=str(uuid.uuid4()))
+    commentid = Column(String,ForeignKey("comments.id"),nullable=False,unique=False)
+    userid = Column(String, ForeignKey("user.id"),nullable=False,unique=False)
+    data = Column(String,nullable=False,unique=False)
+    created_at = Column(String,default=datetime.now(tz=timezone.utc))
+    is_deleted = Column(Boolean,default=False)
+    
