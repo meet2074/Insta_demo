@@ -22,6 +22,7 @@ class User(Base):
     updated_at = Column(DateTime,default=datetime.now(tz=timezone.utc))
     is_deleted = Column(Boolean,nullable=True,default=False)
     is_active = Column(Boolean,default=False)
+    is_not_active = Column(Boolean,default=True)
 
 
 class OTP(Base):
