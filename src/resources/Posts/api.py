@@ -46,7 +46,7 @@ def get_image(post_id: str, db: Session = Depends(get_db)):
         return Response(content=post.text_data, media_type="text/plain")
 
 
-@router.get("/posts/{post_id}")
+@router.get("/post/{post_id}")
 def get_post(
     post_id: str, db: Session = Depends(get_db), payload: dict = Depends(verify_token)
 ):
